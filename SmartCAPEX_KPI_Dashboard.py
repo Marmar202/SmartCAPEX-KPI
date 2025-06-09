@@ -6,34 +6,36 @@ st.set_page_config(layout="wide", page_title="SmartCAPEX KPI Dashboard")
 
 st.title("Infrastructure Health Overview")
 
-# File uploader
+# Upload
 uploaded_file = st.sidebar.file_uploader("Upload Asset CSV", type="csv")
-
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+    df.columns = df.columns.str.strip()  # clean up column names
 else:
     st.warning("Please upload a CSV file to continue.")
     st.stop()
 
-# Asset type filter
+# Filter
 asset_types = df["Asset Type"].dropna().unique()
 selected_type = st.sidebar.selectbox("Select Asset Type", ["All"] + list(asset_types))
+df_filtered = df if selected_type == "All" else df[df["Asset Type"] == selected_type]
 
-if selected_type != "All":
-    df_filtered = df[df["Asset Type"] == selected_type]
-else:
-    df_filtered = df
-
-# Convert Risk to numeric if needed
+# Convert
 df_filtered["Risk"] = pd.to_numeric(df_filtered["Risk"], errors="coerce")
+df_filtered["Condition"] = pd.to_numeric(df_filtered["Condition"], errors="coerce")
 
-# KPI metrics
+# Validate data
+if df_filtered["Risk"].dropna().empty:
+    st.warning("No valid risk data found. Please check the 'Risk' column in your file.")
+    st.stop()
+
+# Metrics
 avg_condition = round(df_filtered["Condition"].mean(), 2)
 avg_risk = round(df_filtered["Risk"].mean(), 2)
 total_assets = df_filtered.shape[0]
 below_threshold = df_filtered[df_filtered["Condition"] < 3.0].shape[0]
 
-# Display visuals
+# Charts
 col1, col2 = st.columns(2)
 
 with col1:
